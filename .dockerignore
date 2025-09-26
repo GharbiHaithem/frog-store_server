@@ -1,0 +1,24 @@
+# Ignorer le dossier node_modules (les dépendances seront installées dans l'image)
+node_modules
+
+# Ignorer les fichiers de configuration locaux
+
+# Ignorer les logs
+logs
+*.log
+
+# Ignorer les fichiers temporaires
+tmp
+*.tmp
+
+# Ignorer les dossiers ou fichiers spécifiques au système
+.DS_Store
+Thumbs.db
+
+# Ignorer les fichiers de contrôle de version
+.git
+.gitignore
+
+# Ignorer les fichiers de build locaux
+dist
+build
