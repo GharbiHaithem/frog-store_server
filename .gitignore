@@ -1,5 +1,5 @@
 node_modules/
-.env.env
+.env
 *.mp4
 *.zip
 .env
