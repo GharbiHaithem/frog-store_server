@@ -134,7 +134,7 @@ const productCtrl = {
     } catch (error) {
       res.status(500).json({ error: 'Erreur serveur' });
     }
-  }
+  },
   //   deleteCat:async(req,res,next)=>{
   //     const{catId} = req.params
   //     try {
@@ -144,5 +144,15 @@ const productCtrl = {
   //       res.status(500).json({ error: err.message });
   //     }
   //   }
+  getProductsByCategory:async(req,res,next)=>{
+const{catid} = req.params
+try {
+  const products = await Product.find({category:catid})
+ res.json(products);
+} catch (error) {
+    res.status(500).json({ error: 'Erreur serveur' });
+}
+
+  }
 }
 module.exports = productCtrl
