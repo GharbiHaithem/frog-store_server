@@ -66,6 +66,15 @@ const categoryCtrl = {
           } catch (error) {
             res.status(500).json({ error: error.message });
           }
+        },
+        categoryById:async(req,res,next)=>{
+          const{catId} = req.params
+          try {
+            const category = await Category.findById(catId)
+            res.status(201).json(category)
+          } catch (err) {
+            res.status(500).json({ error: err.message });
+          }
         }
 }
 module.exports = categoryCtrl
