@@ -10,6 +10,7 @@ const cartRoute = require('./routers/cart.router')
 const authRoute = require('./routers/userRouter')
 const brandRoute = require('./routers/brandRouter')
 const commandeRoute = require('./routers/commande.route')
+const bannerRoute = require('./routers/bannerRouter')
 const { errorHandler, notFound } = require('./middlware/errorHandler')
 const mongoose = require('mongoose');
 const categoryRoute = require('./routers/categoryRouter')
@@ -123,6 +124,7 @@ app.use('/api', cartRoute)
 app.use('/api', authRoute)
 app.use('/api', commandeRoute)
 app.use('/api', brandRoute)
+app.use('/api', bannerRoute)
 app.post('/send-whatssap',(req,res)=>{
   const{phoneNumber,urlToSend} = req.body
   if(!phoneNumber || !urlToSend){
