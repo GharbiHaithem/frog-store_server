@@ -115,7 +115,7 @@ app.post('/upload', upload1.single('file'), (req, res) => {
     res.json({ url: result.secure_url });
   });
 });
-
+app.use('/api', bannerRoute)
 app.use('/api', cartRoute)
 app.use('/api', categoryRoute)
 app.use('/api', upload.array('images', 11), uploadRoute)
@@ -124,7 +124,7 @@ app.use('/api', cartRoute)
 app.use('/api', authRoute)
 app.use('/api', commandeRoute)
 app.use('/api', brandRoute)
-app.use('/api', bannerRoute)
+
 app.post('/send-whatssap',(req,res)=>{
   const{phoneNumber,urlToSend} = req.body
   if(!phoneNumber || !urlToSend){
