@@ -92,56 +92,72 @@ const cartCtrl={
 },
 
 deleteItemFromCart: async (req, res, next) => {
+  let session;
   try {
     const { cartId } = req.params;
     const { productId } = req.body;
 
-    // Rechercher le panier par son ID
+    // Récupérer le panier (populé pour lire la quantité)
     const updateCart = await Cart.findById(cartId).populate('items.product');
     if (!updateCart) {
       return res.status(404).json({ error: 'Panier non trouvé' });
     }
 
-    // Trouver l'index de l'item à supprimer
+    // Trouver l'item dans le panier
     const itemIndex = updateCart.items.findIndex(
       (it) => it.product._id.toString() === productId
     );
 
-    if (itemIndex > -1) {
-      // Récupérer l'item supprimé
-      const removedItem = updateCart.items[itemIndex];
+    if (itemIndex === -1) {
+      return res.status(404).json({ error: 'Produit non trouvé dans le panier' });
+    }
 
-      // ✅ Récupérer la quantité supprimée
-      const quantityToRestore = removedItem.quantity;
+    const removedItem = updateCart.items[itemIndex];
 
-      // ✅ Mettre à jour le stock du produit
-      await Product.findByIdAndUpdate(
-        productId,
-        { $inc: { quantityStq: quantityToRestore } }, // on réajoute la quantité
+    // SÉCURISATION : forcer un nombre (éviter string/undefined)
+    const quantityToRestore = Number(removedItem.quantity) || 0;
+    const targetProductId = removedItem.product?._id?.toString() || productId;
+
+    console.log('removedItem:', removedItem);
+    console.log('quantityToRestore:', quantityToRestore, 'targetProductId:', targetProductId);
+
+    if (quantityToRestore > 0) {
+      // Mise à jour du stock (atomique pour le produit)
+      const updatedProduct = await Product.findOneAndUpdate(
+        { _id: targetProductId },
+        { $inc: { quantityStq: quantityToRestore } },
         { new: true }
       );
 
-      // ❌ Supprimer l'item du panier
-      updateCart.items.splice(itemIndex, 1);
+      console.log('updatedProduct after restore:', updatedProduct);
 
-      // ✅ Sauvegarder le panier mis à jour
-      await updateCart.save();
-
-      // ✅ Réponse
-      res.status(200).json({
-        message: 'Produit supprimé du panier et stock réajusté',
-        removedItem,
-        cart: updateCart,
-      });
+      if (!updatedProduct) {
+        // Si null -> id invalide ou produit supprimé
+        console.warn('Produit introuvable pour restauration du stock:', targetProductId);
+        // Tu peux décider de renvoyer une erreur ici ou continuer
+      }
     } else {
-      res.status(404).json({ error: 'Produit non trouvé dans le panier' });
+      console.warn('Quantity to restore is 0 or invalid, nothing to inc.');
     }
+
+    // Supprimer l'item du panier et sauvegarder
+    updateCart.items.splice(itemIndex, 1);
+    await updateCart.save();
+
+    return res.status(200).json({
+      message: 'Produit supprimé du panier et stock réajusté',
+      removedItem,
+      cart: updateCart,
+    });
   } catch (error) {
     console.error('Erreur deleteItemFromCart:', error);
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 }
-
 
 }
 
