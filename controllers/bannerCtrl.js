@@ -17,10 +17,16 @@ const bannerCtrl= {
             next(error)
           }
         },
-        getBanner:async(req,res,next) =>{
-            const banner= await Banner.find()
-            res.status(200).json(banner)
-        }
+ getBanner: async (req, res, next) => {
+  try {
+    const banners = await Banner.find();
+    res.status(200).json(banners);
+  } catch (error) {
+    console.error("Erreur getBanner :", error.message);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+}
+
 }
 
 module.exports=bannerCtrl
