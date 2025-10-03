@@ -17,6 +17,10 @@ const bannerCtrl= {
             next(error)
           }
         },
+        getBanner:async(reqnres,next) =>{
+            const banner= await Banner.find()
+            res.status(200).json(banner)
+        }
 }
 
 module.exports=bannerCtrl
