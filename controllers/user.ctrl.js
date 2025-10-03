@@ -34,9 +34,9 @@ const userCtrl = {
     createUser: async (req, res, next) => {
 
         try {
-                    const user  = new User(req.body);
-                    await user.save()
-                    res.status(200).json({ message: 'user ajouté ',user });
+                    const newUser  = new User(req.body);
+                    await newUser.save()
+                    res.status(200).json({ message: 'user ajouté ',newUser });
                   } catch (error) {
                     res.status(500).json({ error: error.message });
                   }
@@ -98,7 +98,7 @@ const userCtrl = {
             {
               $set: {
               
-                adress: newAdressValue,  // met à jour l'élément à l'index donné
+                adress: adress,  // met à jour l'élément à l'index donné
                 numtel
               },
             },
