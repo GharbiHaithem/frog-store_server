@@ -20,6 +20,7 @@ const bannerCtrl= {
  getBanner: async (req, res, next) => {
   try {
     const banners = await Banner.find();
+    console.log(banners)
      return res.status(200).json(banners);
   } catch (error) {
     next(error)
