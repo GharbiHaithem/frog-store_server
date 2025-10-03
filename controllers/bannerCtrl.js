@@ -1,5 +1,22 @@
 const Banner = require('../models/banner')
 const bannerCtrl= {
+getBanner: async (req, res, next) => {
+  try {
+    const banners = await Banner.find();
+    console.log('Bannières récupérées :', banners);
+
+    if (!banners || banners.length === 0) {
+      return res.status(404).json({ message: 'Aucune bannière trouvée' });
+    }
+
+    res.status(200).json(banners);
+  } catch (error) {
+    console.error('Erreur getBanner:', error);
+    res.status(500).json({ message: 'Erreur serveur', error: error.message });
+  }
+}
+,
+
         createBanner: async (req, res, next) => {
           try {
       
@@ -17,15 +34,7 @@ const bannerCtrl= {
             next(error)
           }
         },
- getBanner: async (req, res, next) => {
-  try {
-    const banners = await Banner.find();
-    console.log(banners)
-     return res.status(200).json(banners);
-  } catch (error) {
-    next(error)
-  }
-}
+
 
 }
 
