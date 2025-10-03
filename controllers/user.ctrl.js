@@ -34,35 +34,12 @@ const userCtrl = {
     createUser: async (req, res, next) => {
 
         try {
-            const { email } = req.body
-            const findUser = await User.findOne({ email })
-            console.log(email)
-            if (!findUser || !email ) {
-                // Créez un nouvel utilisateur
-                const newUser = await User.create({...req.body,connected:true})
-                console.log(newUser)
-
-                const token = await newUser.createPasswordResetToken()
-               
-             
-
-
-                // newUser.activate = true;
-                await newUser.save()
-               
-                
-                return res.json({ newUser, token})
-
-            }
-            else if(findUser || email!==null){
-                return res.status(500).json({
-                    msg: 'User Already Exist',
-                    success: false
-                })
-            }
-        } catch (error) {
-            next(error)
-        }
+                    const user  = new User(req.body);
+                    await user.save()
+                    res.status(200).json({ message: 'user ajouté ',user });
+                  } catch (error) {
+                    res.status(500).json({ error: error.message });
+                  }
 
     },
   
@@ -92,9 +69,9 @@ const userCtrl = {
                 _id: findUser._id,
                 firstname: findUser.firstname,
                 lastname: findUser.lastname,
-                email: findUser.email,
+             
                 adress: findUser.adress,
-                token: generateToken(findUser._id),
+              
                 connected:true,
                 gender:findUser.gender,
                 numtel:findUser.numtel
@@ -108,7 +85,7 @@ const userCtrl = {
 
     updateUsera: async (req, res, next) => {
         const { userid } = req.params;
-        const { codepostal, ville, pays, adressIndex, newAdressValue ,numtel} = req.body;  // adressIndex est l'index de l'élément à modifier
+        const {  adress ,numtel} = req.body;  // adressIndex est l'index de l'élément à modifier
       
         try {
           // Trouver l'utilisateur par son ID, mais sans supprimer les champs non spécifiés dans la mise à jour
@@ -120,10 +97,8 @@ const userCtrl = {
             userid,
             {
               $set: {
-                codepostal,
-                ville,
-                pays,
-                [`adress.${adressIndex}`]: newAdressValue,  // met à jour l'élément à l'index donné
+              
+                adress: newAdressValue,  // met à jour l'élément à l'index donné
                 numtel
               },
             },
