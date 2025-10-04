@@ -1,4 +1,4 @@
-
+const Product = require('../models/product.model')
 const Cart = require('../models/cart');
 const { v4: uuidv4 } = require('uuid');
 
