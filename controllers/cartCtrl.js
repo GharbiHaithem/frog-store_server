@@ -95,10 +95,9 @@ deleteItemFromCart: async (req, res, next) => {
   try {
     const { cartId } = req.params;
     const { productId } = req.body;
-  console.log(productId)
+
     // Rechercher le panier par son ID
     const updateCart = await Cart.findById(cartId).populate('items.product');
-
     if (!updateCart) {
       return res.status(404).json({ error: 'Panier non trouvé' });
     }
@@ -109,29 +108,39 @@ deleteItemFromCart: async (req, res, next) => {
     );
 
     if (itemIndex > -1) {
-      // Récupérer le produit à supprimer
+      // Récupérer l'item supprimé
       const removedItem = updateCart.items[itemIndex];
-      
-      // Supprimer l'item du tableau `items`
+
+      // ✅ Récupérer la quantité supprimée
+      const quantityToRestore = removedItem.quantity;
+
+      // ✅ Mettre à jour le stock du produit
+      await Product.findByIdAndUpdate(
+        productId,
+        { $inc: { quantityStq: quantityToRestore } }, // on réajoute la quantité
+        { new: true }
+      );
+
+      // ❌ Supprimer l'item du panier
       updateCart.items.splice(itemIndex, 1);
-    
-      // Sauvegarder les modifications
+
+      // ✅ Sauvegarder le panier mis à jour
       await updateCart.save();
 
-      // Retourner le produit supprimé avec le panier mis à jour
-      res.status(200).json({ 
-        message: 'Produit supprimé du panier', 
-        removedItem: removedItem, 
-        cart: updateCart 
+      // ✅ Réponse
+      res.status(200).json({
+        message: 'Produit supprimé du panier et stock réajusté',
+        removedItem,
+        cart: updateCart,
       });
     } else {
       res.status(404).json({ error: 'Produit non trouvé dans le panier' });
     }
   } catch (error) {
+    console.error('Erreur deleteItemFromCart:', error);
     res.status(500).json({ error: error.message });
   }
 }
-
 
 
 }
