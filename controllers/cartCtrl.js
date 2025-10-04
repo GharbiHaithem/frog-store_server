@@ -1,20 +1,35 @@
 
 const Cart = require('../models/cart');
 const { v4: uuidv4 } = require('uuid');
+
 const addToCart = async (cartUuid, productId, quantity, size) => {
   try {
     let cart;
+
     if (cartUuid) {
-      cart = await Cart.findOne({ uuid: cartUuid }).populate('items.product');
+      cart = await Cart.findOne({ uuid: cartUuid }).populate("items.product");
     }
 
     if (!cart) {
-      cart = new Cart({ uuid: uuidv4() });
+      cart = new Cart({ uuid: uuidv4(), items: [] });
     }
 
-    // Vérifier si le même produit avec la même taille existe déjà
+    // Vérifier si le produit existe
+    const product = await Product.findById(productId);
+    if (!product) {
+      throw new Error("Produit introuvable");
+    }
+
+    // Vérifier le stock disponible
+    if (product.quantityStq < quantity) {
+      throw new Error("Stock insuffisant");
+    }
+
+    // Vérifier si le même produit avec la même taille existe déjà dans le panier
     const productIndex = cart.items.findIndex(
-      item => item.product._id.toString() === productId && item.size === size
+      (item) =>
+        item.product._id.toString() === productId &&
+        item.size === size
     );
 
     if (productIndex > -1) {
@@ -23,10 +38,16 @@ const addToCart = async (cartUuid, productId, quantity, size) => {
       cart.items.push({ product: productId, quantity, size });
     }
 
+    // Diminuer le stock du produit
+    product.quantityStq -= quantity;
+    await product.save();
+
     await cart.save();
+
     return cart.uuid;
   } catch (error) {
     console.error("Erreur lors de l'ajout au panier:", error.message);
+    throw error;
   }
 };
 
