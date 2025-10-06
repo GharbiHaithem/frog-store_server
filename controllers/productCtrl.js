@@ -82,23 +82,20 @@ createProduct: async (req, res, next) => {
       return res.status(400).json({ error: "Les champs obligatoires sont manquants" });
     }
 
-    // ⚙️ Toutes les tailles possibles que tu veux gérer
+    // ⚙️ Toutes les tailles que tu veux supporter
     const allSizes = ["S", "M", "L", "XL", "XXL"];
 
     // ⚙️ Normaliser les tailles envoyées
     const receivedSizes = Array.isArray(sizes) ? sizes : [];
 
-    // ⚙️ Créer un objet pour retrouver rapidement les tailles déjà envoyées
+    // ⚙️ Créer une map des tailles reçues
     const sizeMap = new Map(receivedSizes.map(s => [s.size, s.quantity || 0]));
 
-    // ⚙️ Compléter les tailles manquantes avec quantité 0
+    // ⚙️ Compléter les tailles manquantes avec quantité = 0
     const completeSizes = allSizes.map(size => ({
       size,
       quantity: sizeMap.has(size) ? sizeMap.get(size) : 0
     }));
-
-    // ⚙️ Calcul du stock total
-    const quantityStq = completeSizes.reduce((acc, s) => acc + (s.quantity || 0), 0);
 
     // ✅ Création du produit
     const product = new Product({
@@ -108,7 +105,6 @@ createProduct: async (req, res, next) => {
       images_product,
       prix,
       promotion,
-      quantityStq,
       sizes: completeSizes
     });
 
