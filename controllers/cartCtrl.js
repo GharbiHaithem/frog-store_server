@@ -104,63 +104,57 @@ const cartCtrl={
   }
 },
 
-
-
- deleteItemFromCart : async (req, res) => {
-  const session = await Cart.startSession();
-  session.startTransaction();
+deleteItemFromCart: async (req, res, next) => {
   try {
     const { cartId } = req.params;
-    const { productId, size } = req.body;
+    const { productId } = req.body; // plus besoin de size venant du front
 
-    // Récupérer le panier avec les produits
-    const cart = await Cart.findById(cartId).populate('items.product').session(session);
-    if (!cart) return res.status(404).json({ error: 'Panier non trouvé' });
+    // Récupérer le panier (populé pour lire la quantité)
+    const updateCart = await Cart.findById(cartId).populate('items.product');
+    if (!updateCart) {
+      return res.status(404).json({ error: 'Panier non trouvé' });
+    }
 
-    // Trouver l'item correspondant produit + taille
-    const itemIndex = cart.items.findIndex(
-      (it) => it.product._id.toString() === productId && it.size === size
+    // Trouver l'item correspondant produit (peu importe la taille)
+    const itemIndex = updateCart.items.findIndex(
+      (it) => it.product._id.toString() === productId
     );
-    if (itemIndex === -1) return res.status(404).json({ error: 'Produit non trouvé dans le panier pour cette taille' });
 
-    const removedItem = cart.items[itemIndex];
+    if (itemIndex === -1) {
+      return res.status(404).json({ error: 'Produit non trouvé dans le panier' });
+    }
+
+    const removedItem = updateCart.items[itemIndex];
     const quantityToRestore = Number(removedItem.quantity) || 0;
+    const itemSize = removedItem.size; // taille récupérée directement du panier
 
+    // Restaurer la quantité pour la taille spécifique
     if (quantityToRestore > 0) {
-      // Restaurer la quantité pour la taille spécifique
       const updatedProduct = await Product.findOneAndUpdate(
-        { _id: productId, "sizes.size": size },
+        { _id: productId, "sizes.size": itemSize },
         { $inc: { "sizes.$.quantity": quantityToRestore } },
-        { new: true, session }
+        { new: true }
       );
 
       if (!updatedProduct) {
-        console.warn('Produit introuvable ou taille invalide pour restauration du stock:', productId, size);
+        console.warn('Produit introuvable ou taille invalide pour restauration du stock:', productId, itemSize);
       }
     }
 
-    // Supprimer l'item du panier
-    cart.items.splice(itemIndex, 1);
-    await cart.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
+    // Supprimer l'item du panier et sauvegarder
+    updateCart.items.splice(itemIndex, 1);
+    await updateCart.save();
 
     return res.status(200).json({
       message: 'Produit supprimé du panier et stock réajusté pour la taille',
       removedItem,
-      cart
+      cart: updateCart,
     });
-
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     console.error('Erreur deleteItemFromCart:', error);
     return res.status(500).json({ error: error.message });
   }
-}
-
-
+};
 
 
 }
