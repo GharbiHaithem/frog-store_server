@@ -129,7 +129,7 @@ const cartCtrl={
     if (quantityToRestore > 0) {
       // Restaurer la quantité pour la taille spécifique
       const updatedProduct = await Product.findOneAndUpdate(
-        { _id: productId, "sizes.name": size },
+        { _id: productId, "sizes.size": size },
         { $inc: { "sizes.$.quantity": quantityToRestore } },
         { new: true, session }
       );
