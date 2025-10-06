@@ -66,23 +66,45 @@ const getAllProductsByParentCategory = async (parentCategoryId) => {
   }
 };
 const productCtrl = {
-  createProduct: async (req, res, next) => {
-    try {
+ createProduct: async (req, res, next) => {
+  try {
+    const {
+      titre,
+      description,
+      images_product,
+      category,
+      prix,
+      promotion,
+      sizes
+    } = req.body;
 
-      const { titre, description, images_product, category, prix, promotion, quantityStq ,sizes} = req.body
-
-      if (!titre) {
-        return res.status(400).json({ error: "Le champ 'titre' est requis" });
-      }
-
-      const product = new Product({ titre, description, category, images_product, prix, promotion, quantityStq,sizes })
-      const prod = await product.save()
-      res.status(201).json(prod)
-
-    } catch (error) {
-      next(error)
+    if (!titre || !description || !prix) {
+      return res.status(400).json({ error: "Les champs obligatoires sont manquants" });
     }
-  },
+
+    // ⚙️ Calcul automatique du stock total
+    const quantityStq = Array.isArray(sizes)
+      ? sizes.reduce((acc, s) => acc + (s.quantity || 0), 0)
+      : 0;
+
+    const product = new Product({
+      titre,
+      description,
+      category,
+      images_product,
+      prix,
+      promotion,
+      quantityStq,
+      sizes
+    });
+
+    const prod = await product.save();
+    res.status(201).json(prod);
+  } catch (error) {
+    next(error);
+  }
+},
+
   getproduct: async (req, res, next) => {
     try {
       const product = await Product.find({}).populate('category', 'name')
