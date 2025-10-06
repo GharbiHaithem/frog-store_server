@@ -6,42 +6,54 @@ const addToCart = async (cartUuid, productId, quantity, size) => {
   try {
     let cart;
 
+    // Récupérer le panier existant
     if (cartUuid) {
       cart = await Cart.findOne({ uuid: cartUuid }).populate("items.product");
     }
 
+    // Si aucun panier trouvé → créer un nouveau
     if (!cart) {
       cart = new Cart({ uuid: uuidv4(), items: [] });
     }
 
-    // Vérifier si le produit existe
+    // Vérifier que le produit existe
     const product = await Product.findById(productId);
     if (!product) {
       throw new Error("Produit introuvable");
     }
 
-    // Vérifier le stock disponible
-    if (product.quantityStq < quantity) {
-      throw new Error("Stock insuffisant");
+    // Vérifier que la taille demandée existe
+    const sizeIndex = product.sizes.findIndex(
+      (s) => s.size.toUpperCase() === size.toUpperCase()
+    );
+    if (sizeIndex === -1) {
+      throw new Error(`Taille ${size} non disponible`);
     }
 
-    // Vérifier si le même produit avec la même taille existe déjà dans le panier
-    const productIndex = cart.items.findIndex(
+    // Vérifier le stock disponible pour cette taille
+    const availableStock = product.sizes[sizeIndex].quantity;
+    if (availableStock < quantity) {
+      throw new Error(`Stock insuffisant pour la taille ${size}`);
+    }
+
+    // Vérifier si le même produit + même taille est déjà dans le panier
+    const existingItemIndex = cart.items.findIndex(
       (item) =>
         item.product._id.toString() === productId &&
-        item.size === size
+        item.size.toUpperCase() === size.toUpperCase()
     );
 
-    if (productIndex > -1) {
-      cart.items[productIndex].quantity += quantity;
+    if (existingItemIndex > -1) {
+      cart.items[existingItemIndex].quantity += quantity;
     } else {
       cart.items.push({ product: productId, quantity, size });
     }
 
-    // Diminuer le stock du produit
-    product.quantityStq -= quantity;
-    await product.save();
+    // Diminuer le stock UNIQUEMENT pour la taille correspondante
+    product.sizes[sizeIndex].quantity -= quantity;
 
+    // Sauvegarder les modifications
+    await product.save();
     await cart.save();
 
     return cart.uuid;
@@ -50,6 +62,7 @@ const addToCart = async (cartUuid, productId, quantity, size) => {
     throw error;
   }
 };
+
 
 const cartCtrl={
   deleteCart:async(req,res,next)=>{
