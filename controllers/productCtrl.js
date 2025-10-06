@@ -66,7 +66,7 @@ const getAllProductsByParentCategory = async (parentCategoryId) => {
   }
 };
 const productCtrl = {
- createProduct: async (req, res, next) => {
+createProduct: async (req, res, next) => {
   try {
     const {
       titre,
@@ -82,11 +82,25 @@ const productCtrl = {
       return res.status(400).json({ error: "Les champs obligatoires sont manquants" });
     }
 
-    // ⚙️ Calcul automatique du stock total
-    const quantityStq = Array.isArray(sizes)
-      ? sizes.reduce((acc, s) => acc + (s.quantity || 0), 0)
-      : 0;
+    // ⚙️ Toutes les tailles possibles que tu veux gérer
+    const allSizes = ["S", "M", "L", "XL", "XXL"];
 
+    // ⚙️ Normaliser les tailles envoyées
+    const receivedSizes = Array.isArray(sizes) ? sizes : [];
+
+    // ⚙️ Créer un objet pour retrouver rapidement les tailles déjà envoyées
+    const sizeMap = new Map(receivedSizes.map(s => [s.size, s.quantity || 0]));
+
+    // ⚙️ Compléter les tailles manquantes avec quantité 0
+    const completeSizes = allSizes.map(size => ({
+      size,
+      quantity: sizeMap.has(size) ? sizeMap.get(size) : 0
+    }));
+
+    // ⚙️ Calcul du stock total
+    const quantityStq = completeSizes.reduce((acc, s) => acc + (s.quantity || 0), 0);
+
+    // ✅ Création du produit
     const product = new Product({
       titre,
       description,
@@ -95,11 +109,12 @@ const productCtrl = {
       prix,
       promotion,
       quantityStq,
-      sizes
+      sizes: completeSizes
     });
 
     const prod = await product.save();
     res.status(201).json(prod);
+
   } catch (error) {
     next(error);
   }
