@@ -104,73 +104,64 @@ const cartCtrl={
   }
 },
 
-deleteItemFromCart: async (req, res, next) => {
-  let session;
+
+
+ deleteItemFromCart : async (req, res) => {
+  const session = await Cart.startSession();
+  session.startTransaction();
   try {
     const { cartId } = req.params;
-    const { productId } = req.body;
+    const { productId, size } = req.body;
 
-    // Récupérer le panier (populé pour lire la quantité)
-    const updateCart = await Cart.findById(cartId).populate('items.product');
-    if (!updateCart) {
-      return res.status(404).json({ error: 'Panier non trouvé' });
-    }
+    // Récupérer le panier avec les produits
+    const cart = await Cart.findById(cartId).populate('items.product').session(session);
+    if (!cart) return res.status(404).json({ error: 'Panier non trouvé' });
 
-    // Trouver l'item dans le panier
-    const itemIndex = updateCart.items.findIndex(
-      (it) => it.product._id.toString() === productId
+    // Trouver l'item correspondant produit + taille
+    const itemIndex = cart.items.findIndex(
+      (it) => it.product._id.toString() === productId && it.size === size
     );
+    if (itemIndex === -1) return res.status(404).json({ error: 'Produit non trouvé dans le panier pour cette taille' });
 
-    if (itemIndex === -1) {
-      return res.status(404).json({ error: 'Produit non trouvé dans le panier' });
-    }
-
-    const removedItem = updateCart.items[itemIndex];
-
-    // SÉCURISATION : forcer un nombre (éviter string/undefined)
+    const removedItem = cart.items[itemIndex];
     const quantityToRestore = Number(removedItem.quantity) || 0;
-    const targetProductId = removedItem.product?._id?.toString() || productId;
-
-    console.log('removedItem:', removedItem);
-    console.log('quantityToRestore:', quantityToRestore, 'targetProductId:', targetProductId);
 
     if (quantityToRestore > 0) {
-      // Mise à jour du stock (atomique pour le produit)
+      // Restaurer la quantité pour la taille spécifique
       const updatedProduct = await Product.findOneAndUpdate(
-        { _id: targetProductId },
-        { $inc: { quantityStq: quantityToRestore } },
-        { new: true }
+        { _id: productId, "sizes.name": size },
+        { $inc: { "sizes.$.quantity": quantityToRestore } },
+        { new: true, session }
       );
 
-      console.log('updatedProduct after restore:', updatedProduct);
-
       if (!updatedProduct) {
-        // Si null -> id invalide ou produit supprimé
-        console.warn('Produit introuvable pour restauration du stock:', targetProductId);
-        // Tu peux décider de renvoyer une erreur ici ou continuer
+        console.warn('Produit introuvable ou taille invalide pour restauration du stock:', productId, size);
       }
-    } else {
-      console.warn('Quantity to restore is 0 or invalid, nothing to inc.');
     }
 
-    // Supprimer l'item du panier et sauvegarder
-    updateCart.items.splice(itemIndex, 1);
-    await updateCart.save();
+    // Supprimer l'item du panier
+    cart.items.splice(itemIndex, 1);
+    await cart.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     return res.status(200).json({
-      message: 'Produit supprimé du panier et stock réajusté',
+      message: 'Produit supprimé du panier et stock réajusté pour la taille',
       removedItem,
-      cart: updateCart,
+      cart
     });
+
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error('Erreur deleteItemFromCart:', error);
     return res.status(500).json({ error: error.message });
-  } finally {
-    if (session) {
-      await session.endSession();
-    }
   }
 }
+
+
+
 
 }
 
