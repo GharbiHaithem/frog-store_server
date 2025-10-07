@@ -186,6 +186,24 @@ try {
     res.status(500).json({ error: 'Erreur serveur' });
 }
 
+  },
+  filterProduct:async(req,res,next)=>{
+    
+    try {
+    const {size} = req.query
+    let query = {}
+    if(size){
+      query = {
+        sizes:{
+          $elemMatch: {size:size , quantity:{ $gt:0}}
+        }
+      }
+      const products = await Product.find(query)
+      res.json(products)
+    }  
+    } catch (error) {
+       res.status(500).json({ error: 'Erreur serveur' });
+    }
   }
 }
 module.exports = productCtrl
