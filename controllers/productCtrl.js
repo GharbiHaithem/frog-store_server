@@ -279,6 +279,37 @@ try {
   }
 },
 
+deleteProductImages: async (req, res) => {
+  try {
+    const { id } = req.params; // ID du produit
+    const { imagesToDelete } = req.body; // tableau des URLs à supprimer
+
+    if (!imagesToDelete || !Array.isArray(imagesToDelete)) {
+      return res.status(400).json({ error: "imagesToDelete doit être un tableau" });
+    }
+
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ error: "Produit non trouvé" });
+    }
+
+    // ✅ Supprimer uniquement les images correspondantes
+    product.images_product = product.images_product.filter(
+      img => !imagesToDelete.includes(img.url || img)
+    );
+
+    await product.save();
+
+    res.json({
+      message: "Images supprimées avec succès",
+      images_restantes: product.images_product,
+      product
+    });
+  } catch (error) {
+    console.error("Erreur suppression image:", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+},
 
 }
 module.exports = productCtrl
