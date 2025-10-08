@@ -219,6 +219,66 @@ try {
     } catch (error) {
          res.status(500).json({ error: 'Erreur serveur' });
     }
+  },
+ updateProduct: async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      titre,
+      description,
+      category,
+      images_product,
+      prix,
+      promotion,
+      sizes
+    } = req.body;
+
+    // Vérifie si le produit existe
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ error: "Produit non trouvé" });
+    }
+
+    // Met à jour uniquement les champs envoyés
+    if (titre !== undefined) product.titre = titre;
+    if (description !== undefined) product.description = description;
+    if (category !== undefined) product.category = category;
+    if (prix !== undefined) product.prix = prix;
+    if (promotion !== undefined) product.promotion = promotion;
+
+    // ✅ Gestion intelligente des images
+    if (images_product && images_product.length > 0) {
+      // Ajoute uniquement les nouvelles images sans écraser les anciennes
+      product.images_product = [
+        ...product.images_product,
+        ...images_product.filter(
+          img =>
+            !product.images_product.some(existing => existing.url === img.url)
+        )
+      ];
+    }
+
+    // ✅ Gestion intelligente des tailles
+    if (sizes && sizes.length > 0) {
+      const allSizes = ["S", "M", "L", "XL", "XXL"];
+      const sizeMap = new Map(sizes.map(s => [s.size, s.quantity || 0]));
+
+      product.sizes = allSizes.map(size => ({
+        size,
+        quantity: sizeMap.has(size)
+          ? sizeMap.get(size)
+          : product.sizes.find(s => s.size === size)?.quantity || 0
+      }));
+    }
+
+    const updated = await product.save();
+    res.status(200).json({ message: "Produit mis à jour avec succès", product: updated });
+  } catch (error) {
+    console.error("Erreur update product:", error);
+    res.status(500).json({ error: "Erreur serveur" });
   }
+},
+
+
 }
 module.exports = productCtrl

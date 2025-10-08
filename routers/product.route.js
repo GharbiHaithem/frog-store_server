@@ -1,6 +1,6 @@
 const express =require('express')
 const router = express.Router()
-const {createProduct,getproduct,productByParentCategory,getProductById,searchProduct,getProductsByCategory,filterProduct,deleteProduct}= require('../controllers/productCtrl')
+const {createProduct,getproduct,productByParentCategory,getProductById,searchProduct,getProductsByCategory,updateProduct,filterProduct,deleteProduct}= require('../controllers/productCtrl')
 router.post('/create-product', createProduct);
 router.post('/products/by-category/:categoryId', productByParentCategory);
 router.get('/filter/product', filterProduct);
@@ -11,6 +11,6 @@ router.get('/getAllProduct', getproduct);
 
 router.get('/:productId', getProductById);
 router.delete('/:id', deleteProduct);
-
+router.put('/:id', updateProduct);
 
 module.exports = router
