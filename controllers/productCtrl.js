@@ -220,7 +220,7 @@ try {
          res.status(500).json({ error: 'Erreur serveur' });
     }
   },
- updateProduct: async (req, res, next) => {
+updateProduct: async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
@@ -233,33 +233,36 @@ try {
       sizes
     } = req.body;
 
-    // Vérifie si le produit existe
+    // 🔎 Vérifie si le produit existe
     const product = await Product.findById(id);
     if (!product) {
       return res.status(404).json({ error: "Produit non trouvé" });
     }
 
-    // Met à jour uniquement les champs envoyés
+    // 🧩 Met à jour uniquement les champs envoyés
     if (titre !== undefined) product.titre = titre;
     if (description !== undefined) product.description = description;
     if (category !== undefined) product.category = category;
     if (prix !== undefined) product.prix = prix;
     if (promotion !== undefined) product.promotion = promotion;
 
-    // ✅ Gestion intelligente des images
-    if (images_product && images_product.length > 0) {
-      // Ajoute uniquement les nouvelles images sans écraser les anciennes
-      product.images_product = [
-        ...product.images_product,
-        ...images_product.filter(
-          img =>
-            !product.images_product.some(existing => existing.url === img.url)
-        )
-      ];
-    }
+    // 🖼️ Gestion intelligente des images
+    if (Array.isArray(images_product) && images_product.length > 0) {
+      // Ajoute uniquement les nouvelles images qui n’existent pas déjà
+      const nouvellesImages = images_product.filter(
+        img => !product.images_product.some(existing => existing.url === img.url)
+      );
 
-    // ✅ Gestion intelligente des tailles
-    if (sizes && sizes.length > 0) {
+      // Fusionner les anciennes + nouvelles images
+      const fusion = [...product.images_product, ...nouvellesImages];
+
+      // Garder seulement les 3 premières (limite 3)
+      product.images_product = fusion.slice(0, 3);
+    }
+    // sinon : ne rien changer → garde les anciennes images
+
+    // 📏 Gestion intelligente des tailles
+    if (Array.isArray(sizes) && sizes.length > 0) {
       const allSizes = ["S", "M", "L", "XL", "XXL"];
       const sizeMap = new Map(sizes.map(s => [s.size, s.quantity || 0]));
 
@@ -271,13 +274,15 @@ try {
       }));
     }
 
+    // 💾 Sauvegarde finale
     const updated = await product.save();
     res.status(200).json({ message: "Produit mis à jour avec succès", product: updated });
   } catch (error) {
     console.error("Erreur update product:", error);
     res.status(500).json({ error: "Erreur serveur" });
   }
-},
+}
+
 
 deleteProductImages: async (req, res) => {
   try {
