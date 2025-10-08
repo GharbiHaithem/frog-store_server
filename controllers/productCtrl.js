@@ -281,7 +281,7 @@ updateProduct: async (req, res, next) => {
     console.error("Erreur update product:", error);
     res.status(500).json({ error: "Erreur serveur" });
   }
-}
+},
 
 
 deleteProductImages: async (req, res) => {
