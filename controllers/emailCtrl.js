@@ -2,12 +2,12 @@ const nodemailer = require('nodemailer')
 const sendEmail = (data) => {
   return new Promise((resolve, reject) => {
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
+      host: "smtp.sendgrid.net",
       port: 587,
       secure: false,
       auth: {
-        user: 'gharbi.haythem1988@gmail.com',
-        pass: 'zgcvivgztxykhpuy',
+        user: 'apikey',
+        pass: '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',
       },
 });
 
