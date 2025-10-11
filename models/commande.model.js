@@ -9,6 +9,7 @@ const commandeSchema = new mongoose.Schema({
       payementMethode:String,
       codepostal:String,
       refCommande:String,
+      size:String
       
 },{
       timestamps:true
