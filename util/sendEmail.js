@@ -6,8 +6,8 @@ const sendEmail = (data) => {
       port: 587,
       secure: false,
       auth: {
-        user: 'gharbi.haythem1988@gmail.com',
-        pass: 'pukqilhakbzkwybh',
+        user: 'apikey',
+        pass: process.env.SENDGRID_API_KEY,
       },
 });
 
