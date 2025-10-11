@@ -7,7 +7,7 @@ const sendEmail = (data) => {
       secure: false,
       auth: {
         user: 'gharbi.haythem1988@gmail.com',
-        pass: process.env.SENDGRID_API_KEY,
+        pass: 'fgwrxppsrthxllxs',
       },
 });
 
