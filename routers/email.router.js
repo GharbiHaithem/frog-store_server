@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
     pass: 'fgwrxppsrthxllxs',            // mot de passe d’application
   },
 });
-app.post('/send-pdf-email', async (req, res) => {
+router.post('/send-pdf-email', async (req, res) => {
   const { to, pdfUrl, subject } = req.body;
 
   try {
