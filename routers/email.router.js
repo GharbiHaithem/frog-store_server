@@ -1,7 +1,8 @@
 // backend/routes/email.route.js
 const express = require('express');
 const router = express.Router();
-const sendEmail = require('../util/sendEmail'); // ton fichier nodemailer
+const nodemailer = require('nodemailer')
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
