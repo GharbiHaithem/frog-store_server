@@ -6,8 +6,8 @@ require('dotenv').config();
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
+    user: 'gharbi.haythem1988@gmail.com',
+    pass: 'fgwrxppsrthxllxs',
   },
 });
 
@@ -16,7 +16,7 @@ router.post('/send-pdf-email', async (req, res) => {
 
   try {
     await transporter.sendMail({
-      from: process.env.GMAIL_USER,
+      from: 'gharbi.haythem1988@gmail.com',
       to,
       subject,
       html: `
