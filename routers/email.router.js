@@ -1,13 +1,13 @@
-const express = require('express');
-const router = express.Router();
+
+
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'gharbi.haythem1988@gmail.com',
-    pass: 'fgwrxppsrthxllxs',
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS, // <-- mot de passe d’application
   },
 });
 
@@ -16,7 +16,7 @@ router.post('/send-pdf-email', async (req, res) => {
 
   try {
     await transporter.sendMail({
-      from: 'gharbi.haythem1988@gmail.com',
+      from: process.env.GMAIL_USER,
       to,
       subject,
       html: `
@@ -32,5 +32,3 @@ router.post('/send-pdf-email', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
-module.exports = router;
