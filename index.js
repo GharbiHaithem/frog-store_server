@@ -26,7 +26,7 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = new twilio(accountSid, authToken);
 const cookieParser = require('cookie-parser');
 const path = require('path');
-const emailRoute = require('./routers/email.router');
+const mailRoute = require('./routers/email.router');
 app.use(morgan("dev"))
 app.use(cookieParser());
 app.use(cors());
@@ -167,7 +167,7 @@ cron.schedule('38 22 * * *', () => {
   sendMessage();
 });
 
-app.use('/api', emailRoute);
+app.use('/api/mail', mailRoute);
 app.listen(PORT, '0.0.0.0', () => {
   console.log('Server is running at PORT 5000');
 });

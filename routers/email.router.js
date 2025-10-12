@@ -1,38 +1,59 @@
+const express = require('express');
+const router = express.Router();
+const Mailjet = require('node-mailjet');
+const mailjet = Mailjet.apiConnect(
+  process.env.MAILJET_API_KEY,
+  process.env.MAILJET_API_SECRET
+);
 
-const express =require('express')
-const router = express.Router()
-const nodemailer = require('nodemailer');
-require('dotenv').config();
+// POST /api/mail/send
+router.post('/send', async (req, res) => {
+  try {
+    const { to, subject, pdfUrl } = req.body;
 
-const transporter = nodemailer.createTransport({
-   host: "smtp.gmail.com",
-  port: 465,           // Essaye le port SSL
-  secure: false,        // true pour 465
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS, // <-- mot de passe d’application
-  },
+    if (!pdfUrl || !subject || !to) {
+      return res.status(400).json({ message: 'Missing parameters' });
+    }
+console.log("Sending email with link:", pdfUrl);
+const request = mailjet.post('send', { version: 'v3.1' }).request({
+  Messages: [
+    {
+      From: {
+        Email: "gharbi.haythem1988@gmail.com",
+        Name: "Store Serigraphie"
+      },
+      To: [
+        {
+          Email: to,
+          Name: "Client"
+        }
+      ],
+      Subject: subject,
+      TextPart: `Bonjour, voici votre PDF : ${pdfUrl}`,
+      HTMLPart: `
+        <div style="font-family:Arial,sans-serif;font-size:16px;color:#333">
+          <h3>Bonjour 👋</h3>
+          <p>Voici votre document PDF :</p>
+          <p>
+            <a href="${pdfUrl}" 
+               style="color:#007bff;text-decoration:none;font-weight:bold"
+               target="_blank">
+               📄 Ouvrir le PDF
+            </a>
+          </p>
+          <p>Merci pour votre confiance,<br/>Store Serigraphie</p>
+        </div>
+      `
+    }
+  ]
 });
 
-router.post('/send-pdf-email', async (req, res) => {
-  const { to, pdfUrl, subject } = req.body;
-
-  try {
-    await transporter.sendMail({
-      from: process.env.GMAIL_USER,
-      to,
-      subject,
-      html: `
-        <p>Bonjour,</p>
-        <p>Voici votre facture :</p>
-        <a href="${pdfUrl}" target="_blank">${pdfUrl}</a>
-      `,
-    });
-
-    res.json({ success: true });
+    const result = await request;
+    res.json({ success: true, result: result.body });
   } catch (error) {
-    console.error('Erreur envoi:', error);
+    console.error(error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
-module.exports = router
+
+module.exports = router;
