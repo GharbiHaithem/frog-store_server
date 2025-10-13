@@ -223,45 +223,29 @@ try {
 updateProduct: async (req, res, next) => {
   try {
     const { id } = req.params;
-    const {
-      titre,
-      description,
-      category,
-      images_product,
-      prix,
-      promotion,
-      sizes
-    } = req.body;
+    const { titre, description, category, images_product, prix, promotion, sizes } = req.body;
 
-    // 🔎 Vérifie si le produit existe
     const product = await Product.findById(id);
-    if (!product) {
-      return res.status(404).json({ error: "Produit non trouvé" });
-    }
+    if (!product) return res.status(404).json({ error: "Produit non trouvé" });
 
-    // 🧩 Met à jour uniquement les champs envoyés
+    // 🔹 Met à jour les champs simples
     if (titre !== undefined) product.titre = titre;
     if (description !== undefined) product.description = description;
     if (category !== undefined) product.category = category;
     if (prix !== undefined) product.prix = prix;
     if (promotion !== undefined) product.promotion = promotion;
 
-    // 🖼️ Gestion intelligente des images
+    // 🔹 Gestion des images (même si vide, on garde les anciennes)
     if (Array.isArray(images_product) && images_product.length > 0) {
-      // Ajoute uniquement les nouvelles images qui n’existent pas déjà
       const nouvellesImages = images_product.filter(
-        img => !product.images_product.some(existing => existing.url === img.url)
+        img => !product.images_product.some(e => e.url === img.url)
       );
-
-      // Fusionner les anciennes + nouvelles images
-      const fusion = [...product.images_product, ...nouvellesImages];
-
-      // Garder seulement les 3 premières (limite 3)
-      product.images_product = fusion.slice(0, 3);
+      product.images_product = [...product.images_product, ...nouvellesImages].slice(0, 3);
+    } else if (!product.images_product) {
+      product.images_product = []; // au moins un tableau vide pour éviter save() error
     }
-    // sinon : ne rien changer → garde les anciennes images
 
-    // 📏 Gestion intelligente des tailles
+    // 🔹 Gestion des tailles seulement si envoyées
     if (Array.isArray(sizes) && sizes.length > 0) {
       const allSizes = ["S", "M", "L", "XL", "XXL"];
       const sizeMap = new Map(sizes.map(s => [s.size, s.quantity || 0]));
@@ -270,18 +254,20 @@ updateProduct: async (req, res, next) => {
         size,
         quantity: sizeMap.has(size)
           ? sizeMap.get(size)
-          : product.sizes.find(s => s.size === size)?.quantity || 0
+          : product.sizes?.find(s => s.size === size)?.quantity || 0
       }));
     }
 
-    // 💾 Sauvegarde finale
+    // 🔹 Sauvegarde finale
     const updated = await product.save();
     res.status(200).json({ message: "Produit mis à jour avec succès", product: updated });
+
   } catch (error) {
     console.error("Erreur update product:", error);
     res.status(500).json({ error: "Erreur serveur" });
   }
-},
+}
+,
 
 
 deleteProductImages: async (req, res) => {
