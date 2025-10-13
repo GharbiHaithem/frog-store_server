@@ -235,15 +235,21 @@ updateProduct: async (req, res, next) => {
     if (prix !== undefined) product.prix = prix;
     if (promotion !== undefined) product.promotion = promotion;
 
-    // 🔹 Gestion des images (même si vide, on garde les anciennes)
-    if (Array.isArray(images_product) && images_product.length > 0) {
-      const nouvellesImages = images_product.filter(
-        img => !product.images_product.some(e => e.url === img.url)
-      );
-      product.images_product = [...product.images_product, ...nouvellesImages].slice(0, 3);
-    } else if (!product.images_product) {
-      product.images_product = []; // au moins un tableau vide pour éviter save() error
-    }
+ product.images_product = Array.isArray(product.images_product)
+  ? product.images_product
+  : [];
+
+// Assure-toi que images_product est un tableau d'objets valides
+const nouvellesImages = Array.isArray(images_product)
+  ? images_product.filter(
+      img => img && img.url && !product.images_product.some(e => e.url === img.url)
+    )
+  : [];
+
+// Fusionne si nécessaire
+if (nouvellesImages.length > 0) {
+  product.images_product = [...product.images_product, ...nouvellesImages].slice(0, 3);
+}
 
     // 🔹 Gestion des tailles seulement si envoyées
     if (Array.isArray(sizes) && sizes.length > 0) {
