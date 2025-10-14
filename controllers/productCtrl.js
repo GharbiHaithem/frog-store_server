@@ -276,13 +276,13 @@ if (nouvellesImages.length > 0) {
 ,
 
 
-deleteProductImages: async (req, res) => {
+deleteProductImage: async (req, res) => {
   try {
     const { id } = req.params; // ID du produit
-    const { imagesToDelete } = req.body; // tableau des URLs à supprimer
+    const { imageUrl } = req.body; // URL de l'image à supprimer
 
-    if (!imagesToDelete || !Array.isArray(imagesToDelete)) {
-      return res.status(400).json({ error: "imagesToDelete doit être un tableau" });
+    if (!imageUrl) {
+      return res.status(400).json({ error: "imageUrl est requis" });
     }
 
     const product = await Product.findById(id);
@@ -290,23 +290,23 @@ deleteProductImages: async (req, res) => {
       return res.status(404).json({ error: "Produit non trouvé" });
     }
 
-    // ✅ Supprimer uniquement les images correspondantes
+    // ✅ Supprimer uniquement l'image correspondante
     product.images_product = product.images_product.filter(
-      img => !imagesToDelete.includes(img.url || img)
+      (img) => img.url !== imageUrl
     );
 
     await product.save();
 
     res.json({
-      message: "Images supprimées avec succès",
+      message: "Image supprimée avec succès",
       images_restantes: product.images_product,
-      product
     });
   } catch (error) {
     console.error("Erreur suppression image:", error);
     res.status(500).json({ error: "Erreur serveur" });
   }
 },
+
 
 }
 module.exports = productCtrl
