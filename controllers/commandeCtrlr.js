@@ -94,7 +94,27 @@ const commandeCtrl = {
             } catch (error) {
                 res.status(500).json({ error: error.message });
             }
+        },
+        gettAllCommande: async (req, res) => {
+  try {
+    const commande = await Commande.find()
+      .populate('user')
+      .populate({
+        path: 'cart',
+        populate: {
+          path: 'items.product',
+          model: 'Product'
         }
+      })
+      .sort({ createdAt: -1 }); // 🔹 tri décroissant par date
+
+    res.status(200).json(commande);
+  } catch (error) {
+    console.error('❌ Erreur gettAllCommande:', error);
+    res.status(500).json({ message: 'Erreur serveur', error: error.message });
+  }
+}
+
         
     }
     
