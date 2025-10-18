@@ -27,12 +27,25 @@ const client = new twilio(accountSid, authToken);
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const mailRoute = require('./routers/email.router');
+const http = require('http');
+const { Server } = require('socket.io');
+const server = http.createServer(app);
+const io = new Server( server,{
+  cors: {
+    origin: '*', // Ou ton URL frontend
+    methods: ['GET', 'POST']
+  }
+});
+app.set('io', io);
 app.use(morgan("dev"))
 app.use(cookieParser());
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+// Exemple: écouter les connexions socket
+io.on('connection', (socket) => {
+  console.log('🟢 Nouveau client connecté:', socket.id);
+});
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 mongoose.connect(
   process.env.MONGO_URI,
@@ -168,7 +181,7 @@ cron.schedule('38 22 * * *', () => {
 });
 
 app.use('/api/mail', mailRoute);
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log('Server is running at PORT 5000');
 });
 
