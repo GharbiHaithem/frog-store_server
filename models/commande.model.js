@@ -9,8 +9,11 @@ const commandeSchema = new mongoose.Schema({
       payementMethode:String,
       codepostal:String,
       refCommande:String,
-      size:String
-      
+      size:String,
+      status:{
+            type:String,
+           default:'Unread'
+      }
 },{
       timestamps:true
   })
