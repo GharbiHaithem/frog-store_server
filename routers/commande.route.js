@@ -1,9 +1,9 @@
-const {createCommande,getCommande,getCommandeFromUser,commandeById,gettAllCommande} =require('../controllers/commandeCtrlr')
+const {createCommande,getCommande,getCommandeFromUser,commandeById,gettAllCommande,updateStatusCommande} =require('../controllers/commandeCtrlr')
 const express= require('express')
 const router = express.Router()
 
 router.post('/create-commande',createCommande)
-
+router.put('/edit/status/:id',updateStatusCommande)
 
 router.get('/comande/all',gettAllCommande)
 router.get('/getcommande/:commandeid',commandeById)

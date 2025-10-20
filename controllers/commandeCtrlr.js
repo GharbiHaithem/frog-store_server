@@ -137,6 +137,15 @@ const commandeCtrl = {
             res.status(500).json({ message: 'Erreur serveur', error: error.message });
         }
     },
+    updateStatusCommande:async(req,res)=>{
+        try {
+           const {id} = req.params
+           const commande = await Commande.findByIdAndUpdate(id,{status:'Read'},  { new: true, upsert: true } )
+              res.status(200).json(commande);
+        } catch (error) {
+               res.status(500).json({ message: 'Erreur serveur', error: error.message });
+        }
+    }
 };
 
 module.exports = commandeCtrl;
