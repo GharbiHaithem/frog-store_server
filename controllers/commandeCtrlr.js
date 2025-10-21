@@ -128,8 +128,8 @@ const commandeCtrl = {
                     },
                 })
                 .sort({ createdAt: -1 });
-                  const io = req.app.get('io');
-         
+            const io = req.app.get('io');
+
             res.status(200).json(commande);
 
         } catch (error) {
@@ -137,13 +137,22 @@ const commandeCtrl = {
             res.status(500).json({ message: 'Erreur serveur', error: error.message });
         }
     },
-    updateStatusCommande:async(req,res)=>{
+    updateStatusCommande: async (req, res) => {
         try {
-           const {id} = req.params
-           const commande = await Commande.findByIdAndUpdate(id,{status:'Read'},  { new: true, upsert: true } )
-              res.status(200).json(commande);
+            const { id } = req.params
+            const commande = await Commande.findByIdAndUpdate(id, { status: 'Read' }, { new: true, upsert: true })
+            res.status(200).json(commande);
         } catch (error) {
-               res.status(500).json({ message: 'Erreur serveur', error: error.message });
+            res.status(500).json({ message: 'Erreur serveur', error: error.message });
+        }
+    },
+    deleteCommandeById: async (req, res) => {
+        try {
+            const { id } = req.params
+            const command = await Commande.findByIdAndDelete(id)
+            res.status(200).json(command);
+        } catch (error) {
+            res.status(500).json({ message: 'Erreur serveur', error: error.message });
         }
     }
 };
