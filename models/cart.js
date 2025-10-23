@@ -2,7 +2,11 @@ const  mongoose = require('mongoose')
 const cartItemSchema = new mongoose.Schema({
       product:{type: mongoose.Schema.Types.ObjectId,ref:'Product'},
       quantity:{type: Number, default:1},
-      size:String
+      size:String,
+       color: {
+    type: String, // ✅ Couleur choisie par le client
+    required: false
+  }
 })
 const cartSchema = new mongoose.Schema({
       items:[cartItemSchema],
