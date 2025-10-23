@@ -82,22 +82,31 @@ createProduct: async (req, res, next) => {
       return res.status(400).json({ error: "Les champs obligatoires sont manquants" });
     }
 
-    // ⚙️ Toutes les tailles que tu veux supporter
+    // ✅ Tailles supportées
     const allSizes = ["S", "M", "L", "XL", "XXL"];
 
-    // ⚙️ Normaliser les tailles envoyées
+    // ✅ Vérifie si sizes est bien un tableau
     const receivedSizes = Array.isArray(sizes) ? sizes : [];
 
-    // ⚙️ Créer une map des tailles reçues
-    const sizeMap = new Map(receivedSizes.map(s => [s.size, s.quantity || 0]));
+    // ✅ Map pour récupérer size -> { quantity, color }
+    const sizeMap = new Map(
+      receivedSizes.map(s => [
+        s.size,
+        {
+          quantity: s.quantity || 0,
+          color: Array.isArray(s.color) ? s.color : []
+        }
+      ])
+    );
 
-    // ⚙️ Compléter les tailles manquantes avec quantité = 0
+    // ✅ Compléter les tailles manquantes avec quantité = 0 et color = []
     const completeSizes = allSizes.map(size => ({
       size,
-      quantity: sizeMap.has(size) ? sizeMap.get(size) : 0
+      quantity: sizeMap.has(size) ? sizeMap.get(size).quantity : 0,
+      color: sizeMap.has(size) ? sizeMap.get(size).color : []
     }));
 
-    // ✅ Création du produit
+    // ✅ Créer le produit
     const product = new Product({
       titre,
       description,
@@ -115,6 +124,7 @@ createProduct: async (req, res, next) => {
     next(error);
   }
 },
+
 
   getproduct: async (req, res, next) => {
     try {
@@ -228,40 +238,52 @@ updateProduct: async (req, res, next) => {
     const product = await Product.findById(id);
     if (!product) return res.status(404).json({ error: "Produit non trouvé" });
 
-    // 🔹 Met à jour les champs simples
+    // 🔹 Mise à jour des champs simples
     if (titre !== undefined) product.titre = titre;
     if (description !== undefined) product.description = description;
     if (category !== undefined) product.category = category;
     if (prix !== undefined) product.prix = prix;
     if (promotion !== undefined) product.promotion = promotion;
 
- product.images_product = Array.isArray(product.images_product)
-  ? product.images_product
-  : [];
+    // 🔹 Sécuriser images_product
+    product.images_product = Array.isArray(product.images_product) ? product.images_product : [];
 
-// Assure-toi que images_product est un tableau d'objets valides
-const nouvellesImages = Array.isArray(images_product)
-  ? images_product.filter(
-      img => img && img.url && !product.images_product.some(e => e.url === img.url)
-    )
-  : [];
+    const nouvellesImages = Array.isArray(images_product)
+      ? images_product.filter(
+          (img) => img && img.url && !product.images_product.some((e) => e.url === img.url)
+        )
+      : [];
 
-// Fusionne si nécessaire
-if (nouvellesImages.length > 0) {
-  product.images_product = [...product.images_product, ...nouvellesImages].slice(0, 3);
-}
+    if (nouvellesImages.length > 0) {
+      product.images_product = [...product.images_product, ...nouvellesImages].slice(0, 3);
+    }
 
-    // 🔹 Gestion des tailles seulement si envoyées
+    // 🔹 Gestion des tailles et couleurs
     if (Array.isArray(sizes) && sizes.length > 0) {
       const allSizes = ["S", "M", "L", "XL", "XXL"];
-      const sizeMap = new Map(sizes.map(s => [s.size, s.quantity || 0]));
 
-      product.sizes = allSizes.map(size => ({
-        size,
-        quantity: sizeMap.has(size)
-          ? sizeMap.get(size)
-          : product.sizes?.find(s => s.size === size)?.quantity || 0
-      }));
+      // On crée une map à partir du body reçu
+      const sizeMap = new Map(
+        sizes.map((s) => [
+          s.size,
+          {
+            quantity: s.quantity || 0,
+            color: Array.isArray(s.color) ? s.color : [],
+          },
+        ])
+      );
+
+      // Met à jour chaque taille (en gardant les anciennes données si non envoyées)
+      product.sizes = allSizes.map((size) => {
+        const existing = product.sizes?.find((s) => s.size === size);
+        const update = sizeMap.get(size);
+
+        return {
+          size,
+          quantity: update ? update.quantity : existing?.quantity || 0,
+          color: update ? update.color : existing?.color || [],
+        };
+      });
     }
 
     // 🔹 Sauvegarde finale
@@ -273,6 +295,7 @@ if (nouvellesImages.length > 0) {
     res.status(500).json({ error: "Erreur serveur" });
   }
 }
+
 ,
 
 

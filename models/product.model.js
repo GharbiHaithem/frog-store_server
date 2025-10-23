@@ -10,6 +10,7 @@ const productSchema = new mongoose.Schema({
   sizes: [
     {
       size: { type: String, required: true },
+        color: [String] , // ✅ Couleur associée à la taille
       quantity: { type: Number, default: 0 }
     }
   ]
