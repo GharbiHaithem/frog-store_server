@@ -66,7 +66,7 @@ const getAllProductsByParentCategory = async (parentCategoryId) => {
   }
 };
 const productCtrl = {
-createProduct: async (req, res, next) => {
+createProduct : async (req, res, next) => {
   try {
     const {
       titre,
@@ -82,31 +82,36 @@ createProduct: async (req, res, next) => {
       return res.status(400).json({ error: "Les champs obligatoires sont manquants" });
     }
 
-    // ✅ Tailles supportées
+    // ✅ Liste des tailles supportées
     const allSizes = ["S", "M", "L", "XL", "XXL"];
 
-    // ✅ Vérifie si sizes est bien un tableau
+    // ✅ Vérifier que sizes est bien un tableau
     const receivedSizes = Array.isArray(sizes) ? sizes : [];
 
-    // ✅ Map pour récupérer size -> { quantity, color }
+    // ✅ Créer une Map pour récupérer size → { quantity, colors }
     const sizeMap = new Map(
       receivedSizes.map(s => [
         s.size,
         {
           quantity: s.quantity || 0,
-          color: Array.isArray(s.color) ? s.color : []
+          colors: Array.isArray(s.colors)
+            ? s.colors.map(c => ({
+                color: c.color,
+                quantity: c.quantity || 0
+              }))
+            : []
         }
       ])
     );
 
-    // ✅ Compléter les tailles manquantes avec quantité = 0 et color = []
+    // ✅ Compléter les tailles manquantes avec quantité = 0 et colors = []
     const completeSizes = allSizes.map(size => ({
       size,
       quantity: sizeMap.has(size) ? sizeMap.get(size).quantity : 0,
-      color: sizeMap.has(size) ? sizeMap.get(size).color : []
+      colors: sizeMap.has(size) ? sizeMap.get(size).colors : []
     }));
 
-    // ✅ Créer le produit
+    // ✅ Créer le produit complet
     const product = new Product({
       titre,
       description,
@@ -117,8 +122,8 @@ createProduct: async (req, res, next) => {
       sizes: completeSizes
     });
 
-    const prod = await product.save();
-    res.status(201).json(prod);
+    const savedProduct = await product.save();
+    res.status(201).json(savedProduct);
 
   } catch (error) {
     next(error);
@@ -238,7 +243,7 @@ updateProduct: async (req, res, next) => {
     const product = await Product.findById(id);
     if (!product) return res.status(404).json({ error: "Produit non trouvé" });
 
-    // 🔹 Mise à jour des champs simples
+    // 🔹 Champs simples
     if (titre !== undefined) product.titre = titre;
     if (description !== undefined) product.description = description;
     if (category !== undefined) product.category = category;
@@ -247,54 +252,58 @@ updateProduct: async (req, res, next) => {
 
     // 🔹 Sécuriser images_product
     product.images_product = Array.isArray(product.images_product) ? product.images_product : [];
-
     const nouvellesImages = Array.isArray(images_product)
       ? images_product.filter(
           (img) => img && img.url && !product.images_product.some((e) => e.url === img.url)
         )
       : [];
-
     if (nouvellesImages.length > 0) {
       product.images_product = [...product.images_product, ...nouvellesImages].slice(0, 3);
     }
 
-    // 🔹 Gestion des tailles et couleurs
+    // 🔹 Gestion tailles & couleurs
     if (Array.isArray(sizes) && sizes.length > 0) {
       const allSizes = ["S", "M", "L", "XL", "XXL"];
 
-      // On crée une map à partir du body reçu
-      const sizeMap = new Map(
-        sizes.map((s) => [
-          s.size,
-          {
-            quantity: s.quantity || 0,
-            color: Array.isArray(s.color) ? s.color : [],
-          },
-        ])
-      );
-
-      // Met à jour chaque taille (en gardant les anciennes données si non envoyées)
       product.sizes = allSizes.map((size) => {
         const existing = product.sizes?.find((s) => s.size === size);
-        const update = sizeMap.get(size);
+        const update = sizes.find((s) => s.size === size);
 
-        return {
-          size,
-          quantity: update ? update.quantity : existing?.quantity || 0,
-          color: update ? update.color : existing?.color || [],
-        };
+        if (update) {
+          // Somme des quantités par couleur
+          const totalColorsQty = (update.colors || []).reduce((acc, c) => acc + (c.quantity || 0), 0);
+          const maxQty = update.quantity || totalColorsQty;
+
+          if (totalColorsQty > maxQty) {
+            throw new Error(`La somme des quantités par couleur (${totalColorsQty}) dépasse la quantité totale (${maxQty}) pour la taille ${size}`);
+          }
+
+          return {
+            size,
+            quantity: maxQty,
+            colors: Array.isArray(update.colors)
+              ? update.colors.map(c => ({ color: c.color, quantity: c.quantity || 0 }))
+              : [],
+          };
+        } else {
+          return {
+            size,
+            quantity: existing?.quantity || 0,
+            colors: existing?.colors || [],
+          };
+        }
       });
     }
 
-    // 🔹 Sauvegarde finale
     const updated = await product.save();
     res.status(200).json({ message: "Produit mis à jour avec succès", product: updated });
 
   } catch (error) {
     console.error("Erreur update product:", error);
-    res.status(500).json({ error: "Erreur serveur" });
+    res.status(500).json({ error: error.message || "Erreur serveur" });
   }
 }
+
 
 ,
 

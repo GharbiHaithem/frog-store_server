@@ -4,68 +4,64 @@ const { v4: uuidv4 } = require('uuid');
 
 
 const addToCart = async (cartUuid, productId, quantity, size, color) => {
-  try {
-    let cart;
+  let cart;
 
-    // 🛒 Récupérer ou créer le panier
-    if (cartUuid) {
-      cart = await Cart.findOne({ uuid: cartUuid }).populate("items.product");
-    }
-    if (!cart) {
-      cart = new Cart({ uuid: uuidv4(), items: [] });
-    }
-
-    // 🔍 Vérifier que le produit existe
-    const product = await Product.findById(productId);
-    if (!product) throw new Error("Produit introuvable");
-
-    // ✅ Vérifier que la taille demandée existe
-    const sizeIndex = product.sizes.findIndex(
-      (s) => s.size.toUpperCase() === size.toUpperCase()
-    );
-    if (sizeIndex === -1) throw new Error(`Taille ${size} non disponible`);
-
-    // ✅ Vérifier que la couleur demandée existe pour cette taille
-    if (color) {
-      const availableColors = product.sizes[sizeIndex].color || [];
-      if (!availableColors.includes(color)) {
-        throw new Error(`Couleur ${color} non disponible pour la taille ${size}`);
-      }
-    }
-
-    // ✅ Vérifier le stock disponible pour cette taille
-    const availableStock = product.sizes[sizeIndex].quantity;
-    if (availableStock < quantity) {
-      throw new Error(`Stock insuffisant pour la taille ${size}`);
-    }
-
-    // ✅ Vérifier si un item identique existe déjà (même produit + taille + couleur)
-    const existingItemIndex = cart.items.findIndex(
-      (item) =>
-        item.product._id.toString() === productId &&
-        item.size?.toUpperCase() === size.toUpperCase() &&
-        item.color?.toUpperCase() === color?.toUpperCase()
-    );
-
-    if (existingItemIndex > -1) {
-      cart.items[existingItemIndex].quantity += quantity;
-    } else {
-      cart.items.push({ product: productId, quantity, size, color }); // 🟢 Ajout de color
-    }
-
-    // 🔄 Diminuer le stock pour cette taille
-    product.sizes[sizeIndex].quantity -= quantity;
-
-    await product.save();
-    await cart.save();
-
-    return cart.uuid;
-  } catch (error) {
-    console.error("Erreur lors de l'ajout au panier:", error.message);
-    throw error;
+  // 🛒 Charger ou créer le panier
+  if (cartUuid) {
+    cart = await Cart.findOne({ uuid: cartUuid }).populate("items.product");
   }
-};
+  if (!cart) {
+    cart = new Cart({ uuid: uuidv4(), items: [] });
+  }
 
+  // 🔎 Vérifier le produit
+  const product = await Product.findById(productId);
+  if (!product) throw new Error("Produit introuvable");
+
+  // 🔹 Trouver la taille
+  const sizeObj = product.sizes.find(
+    (s) => s.size.toUpperCase() === size.toUpperCase()
+  );
+  if (!sizeObj) throw new Error(`Taille ${size} non disponible`);
+
+  // 🔹 Trouver la couleur dans cette taille
+  const colorObj = sizeObj.colors.find(
+    (c) => c.color.toUpperCase() === color.toUpperCase()
+  );
+  if (!colorObj) throw new Error(`Couleur ${color} non disponible pour la taille ${size}`);
+
+  // 🔹 Vérifier le stock pour cette couleur
+  if (quantity > colorObj.quantity) {
+    throw new Error(
+      `Stock insuffisant pour ${color} (${size}) — disponible: ${colorObj.quantity}`
+    );
+  }
+
+  // 🔹 Vérifier si l’article existe déjà dans le panier
+  const existingItem = cart.items.find(
+    (item) =>
+      item.product._id.toString() === productId &&
+      item.size?.toUpperCase() === size.toUpperCase() &&
+      item.color?.toUpperCase() === color.toUpperCase()
+  );
+
+  if (existingItem) {
+    existingItem.quantity += quantity;
+  } else {
+    cart.items.push({ product: productId, quantity, size, color });
+  }
+
+  // 🔹 Réduire le stock de cette couleur
+  colorObj.quantity -= quantity;
+
+  // 🔹 Mettre à jour la quantité totale de la taille (optionnel)
+  sizeObj.quantity = sizeObj.colors.reduce((sum, c) => sum + c.quantity, 0);
+
+  await product.save();
+  await cart.save();
+
+  return cart.uuid;
+};
 
 
 const cartCtrl={
@@ -93,17 +89,25 @@ const cartCtrl={
     }
   },
 addToCart: async (req, res) => {
-  const { quantity, cartUuid, size, color } = req.body; // 🟢 ajout de color
+const { quantity, cartUuid, size, color } = req.body;
   const { productId } = req.params;
 
   try {
     const newCartUuid = await addToCart(cartUuid, productId, quantity, size, color);
 
+    // Envoi socket (si activé)
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("addcart", newCartUuid);
+      console.log("✅ Nouvelle commande envoyée via Socket.io");
+    }
+
     res.status(200).json({
-      message: 'Produit ajouté au panier',
+      message: "Produit ajouté au panier",
       cartUuid: newCartUuid
     });
   } catch (error) {
+    console.error("❌ Erreur addToCart:", error.message);
     res.status(500).json({ error: error.message });
   }
 },

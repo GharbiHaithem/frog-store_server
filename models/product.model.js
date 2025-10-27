@@ -7,14 +7,21 @@ const productSchema = new mongoose.Schema({
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
   prix: { type: Number, required: true },
   promotion: { type: Number, default: 0 },
+
   sizes: [
     {
       size: { type: String, required: true },
-        color: [String] , // ✅ Couleur associée à la taille
-      quantity: { type: Number, default: 0 }
+      quantity: { type: Number, default: 0 }, // quantité totale de la taille
+      colors: [
+        {
+          color: { type: String, required: true },
+          quantity: { type: Number, default: 0 } // quantité pour cette couleur
+        }
+      ]
     }
   ],
-  selectedColor:String
+
+  selectedColor: String
 });
 
 const Product = mongoose.model('Product', productSchema);
