@@ -116,48 +116,64 @@ const { quantity, cartUuid, size, color } = req.body;
 deleteItemFromCart: async (req, res, next) => {
   try {
     const { cartId } = req.params;
-    const { productId } = req.body; // plus besoin de size venant du front
+    const { productId } = req.body;
 
-    // Récupérer le panier (populé pour lire la quantité)
-    const updateCart = await Cart.findById(cartId).populate('items.product');
-    if (!updateCart) {
-      return res.status(404).json({ error: 'Panier non trouvé' });
-    }
+    // 🔹 1. Charger le panier
+    const cart = await Cart.findById(cartId).populate('items.product');
+    if (!cart) return res.status(404).json({ error: 'Panier non trouvé' });
 
-    // Trouver l'item correspondant produit (peu importe la taille)
-    const itemIndex = updateCart.items.findIndex(
+    // 🔹 2. Trouver l'item correspondant dans le panier
+    const itemIndex = cart.items.findIndex(
       (it) => it.product._id.toString() === productId
     );
-
-    if (itemIndex === -1) {
+    if (itemIndex === -1)
       return res.status(404).json({ error: 'Produit non trouvé dans le panier' });
-    }
 
-    const removedItem = updateCart.items[itemIndex];
-    const quantityToRestore = Number(removedItem.quantity) || 0;
-    const itemSize = removedItem.size; // taille récupérée directement du panier
+    const removedItem = cart.items[itemIndex];
+    const { size: itemSize, color: itemColor, quantity: qtyToRestore } = removedItem;
 
-    // Restaurer la quantité pour la taille spécifique
-    if (quantityToRestore > 0) {
-      const updatedProduct = await Product.findOneAndUpdate(
-        { _id: productId, "sizes.size": itemSize },
-        { $inc: { "sizes.$.quantity": quantityToRestore } },
-        { new: true }
+    // 🔹 3. Restaurer la quantité dans le produit
+    const product = await Product.findById(productId);
+    if (!product)
+      return res.status(404).json({ error: 'Produit introuvable pour restauration' });
+
+    // Trouver la taille concernée
+    const sizeObj = product.sizes.find(
+      (s) => s.size.toUpperCase() === itemSize.toUpperCase()
+    );
+    if (sizeObj) {
+      // 🔸 Restaurer la quantité globale de la taille
+      sizeObj.quantity += qtyToRestore;
+
+      // 🔸 Trouver la couleur correspondante et la restaurer
+      const colorObj = sizeObj.colors.find(
+        (c) => c.color.toUpperCase() === itemColor.toUpperCase()
       );
-
-      if (!updatedProduct) {
-        console.warn('Produit introuvable ou taille invalide pour restauration du stock:', productId, itemSize);
+      if (colorObj) {
+        colorObj.quantity += qtyToRestore;
+      } else {
+        console.warn(
+          `⚠️ Couleur ${itemColor} non trouvée dans la taille ${itemSize} du produit ${productId}`
+        );
       }
+
+      await product.save();
+    } else {
+      console.warn(
+        `⚠️ Taille ${itemSize} non trouvée pour le produit ${productId}`
+      );
     }
 
-    // Supprimer l'item du panier et sauvegarder
-    updateCart.items.splice(itemIndex, 1);
-    await updateCart.save();
+    // 🔹 4. Supprimer l'article du panier
+    cart.items.splice(itemIndex, 1);
+    await cart.save();
 
+    // 🔹 5. Retourner la réponse
     return res.status(200).json({
-      message: 'Produit supprimé du panier et stock réajusté pour la taille',
+      message: 'Produit supprimé du panier et stock restauré (taille + couleur)',
       removedItem,
-      cart: updateCart,
+      updatedProduct: product,
+      updatedCart: cart,
     });
   } catch (error) {
     console.error('Erreur deleteItemFromCart:', error);
@@ -165,6 +181,7 @@ deleteItemFromCart: async (req, res, next) => {
   }
 }
 
+,
 
 }
 
